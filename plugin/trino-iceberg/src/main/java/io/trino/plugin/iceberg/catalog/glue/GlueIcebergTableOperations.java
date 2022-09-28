@@ -57,6 +57,7 @@ public class GlueIcebergTableOperations
 {
     private final AWSGlueAsync glueClient;
     private final GlueMetastoreStats stats;
+    private final boolean skipArchive;
 
     @Nullable
     private String glueVersionId;
@@ -69,11 +70,13 @@ public class GlueIcebergTableOperations
             String database,
             String table,
             Optional<String> owner,
-            Optional<String> location)
+            Optional<String> location,
+            boolean skipArchive)
     {
         super(fileIo, session, database, table, owner, location);
         this.glueClient = requireNonNull(glueClient, "glueClient is null");
         this.stats = requireNonNull(stats, "stats is null");
+        this.skipArchive = skipArchive;
     }
 
     @Override
@@ -127,7 +130,8 @@ public class GlueIcebergTableOperations
         UpdateTableRequest updateTableRequest = new UpdateTableRequest()
                 .withDatabaseName(database)
                 .withTableInput(tableInput)
-                .withVersionId(glueVersionId);
+                .withVersionId(glueVersionId)
+                .withSkipArchive(skipArchive);
         try {
             stats.getUpdateTable().call(() -> glueClient.updateTable(updateTableRequest));
         }

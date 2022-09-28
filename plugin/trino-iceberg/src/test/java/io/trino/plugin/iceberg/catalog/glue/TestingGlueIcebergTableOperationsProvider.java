@@ -36,22 +36,26 @@ public class TestingGlueIcebergTableOperationsProvider
     private final TrinoFileSystemFactory fileSystemFactory;
     private final AWSGlueAsync glueClient;
     private final GlueMetastoreStats stats;
+    private final boolean skipArchive;
 
     @Inject
     public TestingGlueIcebergTableOperationsProvider(
             TrinoFileSystemFactory fileSystemFactory,
             GlueMetastoreStats stats,
             GlueHiveMetastoreConfig glueConfig,
+            IcebergGlueCatalogConfig icebergGlueConfig,
             AWSCredentialsProvider credentialsProvider,
             AWSGlueAsyncAdapterProvider awsGlueAsyncAdapterProvider)
     {
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.stats = requireNonNull(stats, "stats is null");
         requireNonNull(glueConfig, "glueConfig is null");
+        requireNonNull(icebergGlueConfig, "icebergGlueConfig is null");
         requireNonNull(credentialsProvider, "credentialsProvider is null");
         requireNonNull(awsGlueAsyncAdapterProvider, "awsGlueAsyncAdapterProvider is null");
         this.glueClient = awsGlueAsyncAdapterProvider.createAWSGlueAsyncAdapter(
                 createAsyncGlueClient(glueConfig, credentialsProvider, Optional.empty(), stats.newRequestMetricsCollector()));
+        this.skipArchive = icebergGlueConfig.isSkipArchive();
     }
 
     @Override
@@ -71,6 +75,7 @@ public class TestingGlueIcebergTableOperationsProvider
                 database,
                 table,
                 owner,
-                location);
+                location,
+                skipArchive);
     }
 }

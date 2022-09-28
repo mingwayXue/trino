@@ -41,6 +41,7 @@ public class TestingIcebergGlueCatalogModule
     protected void setup(Binder binder)
     {
         configBinder(binder).bindConfig(GlueHiveMetastoreConfig.class);
+        configBinder(binder).bindConfig(IcebergGlueCatalogConfig.class);
         binder.bind(GlueMetastoreStats.class).in(Scopes.SINGLETON);
         newExporter(binder).export(GlueMetastoreStats.class).withGeneratedName();
         binder.bind(AWSCredentialsProvider.class).toProvider(GlueCredentialsProvider.class).in(Scopes.SINGLETON);
