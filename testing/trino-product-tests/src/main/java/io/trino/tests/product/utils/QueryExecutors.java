@@ -123,10 +123,20 @@ public final class QueryExecutors
         // return 502 then as well. Handling this with a query retry allows us to use the cluster's autostart feature safely,
         // while keeping costs to a minimum.
 
-        RetryPolicy<QueryResult> databricksRetryPolicy = new RetryPolicy<QueryResult>()
+        RetryPolicy<QueryResult> databricks502RetryPolicy = new RetryPolicy<QueryResult>()
                 .handleIf(throwable -> throwable.getMessage().contains("HTTP Response code: 502"))
                 .withBackoff(1, 10, ChronoUnit.SECONDS)
                 .withMaxRetries(60)
+                .onRetry(event -> log.warn(event.getLastFailure(), "Query failed on attempt %d, will retry.", event.getAttemptCount()));
+
+        // Databricks JDBC driver retries operations that receive HTTP 503 responses
+        // if the server response is returned with Retry-After headers by default.
+        // Following policy retries only once when received 'HTTP retry after response' without Retry-After headers.
+
+        RetryPolicy<QueryResult> databricks503RetryPolicy = new RetryPolicy<QueryResult>()
+                .handleIf(throwable -> throwable.getMessage().contains("HTTP Response code: 503") && throwable.getMessage().contains("HTTP retry after response received with no Retry-After header"))
+                .withBackoff(1, 10, ChronoUnit.SECONDS)
+                .withMaxRetries(1)
                 .onRetry(event -> log.warn(event.getLastFailure(), "Query failed on attempt %d, will retry.", event.getAttemptCount()));
 
         return new QueryExecutor()
@@ -137,7 +147,7 @@ public final class QueryExecutors
             public QueryResult executeQuery(String sql, QueryParam... params)
                     throws QueryExecutionException
             {
-                return Failsafe.with(databricksRetryPolicy)
+                return Failsafe.with(databricks502RetryPolicy, databricks503RetryPolicy)
                         .get(() -> delegate.executeQuery(sql, params));
             }
 
